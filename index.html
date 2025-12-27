@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Atestados - Cloud</title>
+    <title>Controle de Atestados Pro</title>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -12,104 +12,108 @@
 </head>
 <body>
     <div id="root"></div>
-    
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         // --- CONFIGURAÇÃO SUPABASE ---
         const SUPABASE_URL = 'https://zxjegvonpiuyfplkonkb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4amVndm9ucGl1eWZwbGtvbmtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDQwNjMsImV4cCI6MjA4MjQyMDA2M30.P-EkAuX1LiM5hybYYVaaUvMd04LgV7w0-GDkealXbwo';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Componentes de Ícones (Simplificados para o código não ficar gigante)
-        const IconUpload = () => ( <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg> );
-        const IconUser = () => ( <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> );
-
-        const MedicalApp = () => {
+        const MedicalCertificateTracker = () => {
             const [certificates, setCertificates] = useState([]);
+            const [showForm, setShowForm] = useState(false);
+            const [searchTerm, setSearchTerm] = useState('');
             const [loading, setLoading] = useState(true);
-            const [uploading, setUploading] = useState(false);
-            const [formData, setFormData] = useState({ name: '', store: '', date: new Date().toISOString().split('T')[0] });
+            const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+            const [formData, setFormData] = useState({ attendantName: '', store: '', date: new Date().toISOString().split('T')[0], file: null });
 
             useEffect(() => {
+                localStorage.setItem('darkMode', darkMode);
                 fetchCertificates();
-            }, []);
+            }, [darkMode]);
 
             async function fetchCertificates() {
                 setLoading(true);
-                const { data, error } = await supabase.storage.from('atestados').list('', { sortBy: { column: 'name', order: 'desc' } });
+                const { data, error } = await supabaseClient.storage.from('atestados').list('', { sortBy: { column: 'name', order: 'desc' } });
                 if (data) setCertificates(data);
                 setLoading(false);
             }
 
-            async function handleUpload(e) {
-                const file = e.target.files[0];
-                if (!file || !formData.name) return alert("Preencha o nome e selecione a foto!");
-
-                setUploading(true);
-                const fileName = `${Date.now()}_${formData.name.replace(/\s/g, '_')}_${file.name}`;
+            const handleUpload = async () => {
+                if (!formData.attendantName || !formData.file) return alert('Preencha o nome e escolha a foto!');
                 
-                const { error } = await supabase.storage.from('atestados').upload(fileName, file);
+                const fileName = `${Date.now()}_${formData.attendantName.replace(/\s/g, '_')}_${formData.store}_${formData.file.name}`;
+                
+                const { error } = await supabaseClient.storage.from('atestados').upload(fileName, formData.file);
 
                 if (error) {
-                    alert("Erro no upload: " + error.message);
+                    alert('Erro ao subir: ' + error.message + '. Verifique as Policies no Supabase!');
                 } else {
-                    alert("Atestado enviado!");
-                    setFormData({ ...formData, name: '' });
+                    alert('Atestado salvo na nuvem!');
+                    setFormData({ ...formData, attendantName: '', file: null });
+                    setShowForm(false);
                     fetchCertificates();
                 }
-                setUploading(false);
-            }
+            };
+
+            const filteredCertificates = certificates.filter(cert => 
+                cert.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
 
             return (
-                <div className="min-h-screen bg-gray-100 p-4 md:p-8">
-                    <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-6">
-                        <h1 className="text-3xl font-bold text-indigo-700 mb-6 flex items-center gap-2">
-                            <IconUpload /> Controle de Atestados Cloud
-                        </h1>
-
-                        <div className="bg-indigo-50 p-4 rounded-xl mb-8 border border-indigo-100">
-                            <h2 className="font-semibold mb-4">Novo Envio</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input 
-                                    type="text" placeholder="Nome do Funcionário" 
-                                    className="p-2 border rounded-lg"
-                                    value={formData.name}
-                                    onChange={e => setFormData({...formData, name: e.target.value})}
-                                />
-                                <input 
-                                    type="file" accept="image/*" 
-                                    className="p-2 bg-white border rounded-lg"
-                                    onChange={handleUpload}
-                                    disabled={uploading}
-                                />
+                <div className={`min-h-screen p-4 ${darkMode ? 'bg-gray-900 text-white' : 'bg-blue-50 text-gray-800'}`}>
+                    <div className="max-w-4xl mx-auto">
+                        <div className={`p-6 rounded-2xl shadow-xl mb-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <div className="flex justify-between items-center mb-6">
+                                <h1 className="text-2xl font-bold">Controle de Atestados</h1>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setDarkMode(!darkMode)} className="p-2 border rounded-lg">
+                                        {darkMode ? '☀️ Modo Claro' : '🌙 Modo Escuro'}
+                                    </button>
+                                    <button onClick={() => setShowForm(!showForm)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">
+                                        + Novo
+                                    </button>
+                                </div>
                             </div>
-                            {uploading && <p className="text-indigo-600 mt-2 animate-pulse">Enviando arquivo...</p>}
+
+                            {showForm && (
+                                <div className="space-y-4 p-4 border rounded-xl mb-4 bg-opacity-50">
+                                    <input type="text" placeholder="Nome" className="w-full p-2 border rounded text-black" 
+                                        value={formData.attendantName} onChange={e => setFormData({...formData, attendantName: e.target.value})} />
+                                    <input type="text" placeholder="Loja" className="w-full p-2 border rounded text-black" 
+                                        value={formData.store} onChange={e => setFormData({...formData, store: e.target.value})} />
+                                    <input type="file" onChange={e => setFormData({...formData, file: e.target.files[0]})} className="w-full" />
+                                    <button onClick={handleUpload} className="w-full bg-green-600 text-white p-2 rounded">Salvar na Nuvem</button>
+                                </div>
+                            )}
+
+                            <input type="text" placeholder="🔍 Buscar por nome ou loja..." className="w-full p-2 border rounded text-black"
+                                value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                         </div>
 
-                        <h2 className="text-xl font-bold mb-4">Atestados na Nuvem</h2>
-                        {loading ? <p>Carregando...</p> : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {certificates.map(cert => {
-                                    const { data } = supabase.storage.from('atestados').getPublicUrl(cert.name);
-                                    return (
-                                        <div key={cert.id} className="border p-4 rounded-xl hover:shadow-md transition">
-                                            <div className="flex items-center gap-2 mb-2 font-medium text-gray-700">
-                                                <IconUser /> {cert.name.split('_')[1] || 'Atestado'}
-                                            </div>
-                                            <img src={data.publicUrl} className="w-full h-48 object-cover rounded-lg cursor-pointer" onClick={() => window.open(data.publicUrl)} />
-                                            <p className="text-xs text-gray-400 mt-2">Enviado em: {new Date(parseInt(cert.name.split('_')[0])).toLocaleString()}</p>
+                        <div className="grid gap-4">
+                            {loading ? <p>Carregando arquivos da nuvem...</p> : filteredCertificates.map(cert => {
+                                const { data } = supabaseClient.storage.from('atestados').getPublicUrl(cert.name);
+                                const partes = cert.name.split('_');
+                                return (
+                                    <div key={cert.id} className={`p-4 rounded-xl border-2 flex gap-4 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-blue-100'}`}>
+                                        <img src={data.publicUrl} className="w-24 h-24 object-cover rounded-lg cursor-pointer" onClick={() => window.open(data.publicUrl)} />
+                                        <div>
+                                            <p className="font-bold text-lg">{partes[1] || 'Atestado'}</p>
+                                            <p className="text-sm opacity-70">Loja: {partes[2] || 'Não informada'}</p>
+                                            <p className="text-xs opacity-50">Data: {new Date(parseInt(partes[0])).toLocaleString()}</p>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             );
         };
 
-        ReactDOM.render(<MedicalApp />, document.getElementById('root'));
+        ReactDOM.render(<MedicalCertificateTracker />, document.getElementById('root'));
     </script>
 </body>
 </html>
