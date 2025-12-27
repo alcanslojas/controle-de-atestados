@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Atestados</title>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Ícones SVG
+        const Upload = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+        );
+        
+        const Check = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg>
+        );
+        
+        const X = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        );
+        
+        const Search = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+        );
+        
+        const Calendar = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+        );
+        
+        const Building2 = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+            </svg>
+        );
+        
+        const User = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+        );
+        
+        const FileText = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+        );
+        
+        const Camera = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+            </svg>
+        );
+        
+        const Moon = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+        );
+        
+        const Sun = ({ size = 24, className = "" }) => (
+            <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+        );
+
+        // Sistema de armazenamento local
+        const storage = {
+            get: (key) => {
+                try {
+                    const item = localStorage.getItem(key);
+                    return item ? JSON.parse(item) : null;
+                } catch {
+                    return null;
+                }
+            },
+            set: (key, value) => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+            delete: (key) => {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+            list: (prefix) => {
+                try {
+                    const keys = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith(prefix)) {
+                            keys.push(key);
+                        }
+                    }
+                    return keys;
+                } catch {
+                    return [];
+                }
+            }
+        };
+
+        const MedicalCertificateTracker = () => {
+            const [certificates, setCertificates] = useState([]);
+            const [showForm, setShowForm] = useState(false);
+            const [filter, setFilter] = useState('todos');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [darkMode, setDarkMode] = useState(() => {
+                const saved = localStorage.getItem('darkMode');
+                return saved === 'true';
+            });
+            const [formData, setFormData] = useState({
+                attendantName: '',
+                store: '',
+                date: new Date().toISOString().split('T')[0],
+                image: null,
+                imagePreview: null
+            });
+
+            useEffect(() => {
+                localStorage.setItem('darkMode', darkMode);
+            }, [darkMode]);
+
+            useEffect(() => {
+                loadCertificates();
+            }, []);
+
+            const loadCertificates = () => {
+                const keys = storage.list('cert:');
+                const loadedCerts = keys.map(key => storage.get(key)).filter(c => c !== null);
+                setCertificates(loadedCerts.sort((a, b) => new Date(b.date) - new Date(a.date)));
+            };
+
+            const saveCertificate = (cert) => {
+                storage.set(`cert:${cert.id}`, cert);
+                loadCertificates();
+            };
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setFormData({
+                            ...formData,
+                            image: reader.result,
+                            imagePreview: reader.result
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleSubmit = () => {
+                if (!formData.attendantName || !formData.store || !formData.image) {
+                    alert('Por favor, preencha todos os campos e adicione uma foto');
+                    return;
+                }
+
+                const newCertificate = {
+                    id: Date.now().toString(),
+                    attendantName: formData.attendantName,
+                    store: formData.store,
+                    date: formData.date,
+                    image: formData.image,
+                    status: {
+                        photoReceived: true,
+                        uploadedToForm: false,
+                        physicallyReceived: false,
+                        physicalDelivery: false
+                    },
+                    createdAt: new Date().toISOString()
+                };
+
+                saveCertificate(newCertificate);
+                
+                setFormData({
+                    attendantName: '',
+                    store: '',
+                    date: new Date().toISOString().split('T')[0],
+                    image: null,
+                    imagePreview: null
+                });
+                setShowForm(false);
+            };
+
+            const updateStatus = (id, statusKey) => {
+                const cert = certificates.find(c => c.id === id);
+                if (!cert) return;
+
+                const updatedCert = {
+                    ...cert,
+                    status: {
+                        ...cert.status,
+                        [statusKey]: !cert.status[statusKey]
+                    }
+                };
+
+                saveCertificate(updatedCert);
+            };
+
+            const deleteCertificate = (id) => {
+                if (window.confirm('Tem certeza que deseja excluir este atestado?')) {
+                    storage.delete(`cert:${id}`);
+                    loadCertificates();
+                }
+            };
+
+            const getStatusColor = (cert) => {
+                if (cert.status.physicalDelivery) return 'bg-green-100 border-green-300';
+                if (cert.status.uploadedToForm) return 'bg-yellow-100 border-yellow-300';
+                return 'bg-blue-100 border-blue-300';
+            };
+
+            const getProgress = (status) => {
+                const steps = [status.photoReceived, status.uploadedToForm, status.physicallyReceived, status.physicalDelivery];
+                const completed = steps.filter(Boolean).length;
+                return (completed / 4) * 100;
+            };
+
+            const filteredCertificates = certificates.filter(cert => {
+                const matchesSearch = cert.attendantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    cert.store.toLowerCase().includes(searchTerm.toLowerCase());
+                
+                if (filter === 'todos') return matchesSearch;
+                if (filter === 'pendentes') return matchesSearch && !cert.status.physicalDelivery;
+                if (filter === 'concluidos') return matchesSearch && cert.status.physicalDelivery;
+                return matchesSearch;
+            });
+
+            return (
+                <div className={`min-h-screen p-4 ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'}`}>
+                    <div className="max-w-6xl mx-auto">
+                        <div className={`rounded-2xl shadow-xl p-6 mb-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h1 className={`text-3xl font-bold flex items-center gap-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        <FileText className="text-indigo-600" size={36} />
+                                        Controle de Atestados
+                                    </h1>
+                                    <p className={`mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Gerencie os atestados da sua equipe de forma simples</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setDarkMode(!darkMode)}
+                                        className={`p-3 rounded-xl transition-all shadow-lg hover:shadow-xl ${
+                                            darkMode ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        }`}
+                                        title={darkMode ? 'Modo Claro' : 'Modo Escuro'}
+                                    >
+                                        {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowForm(!showForm)}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                                    >
+                                        <Upload size={20} />
+                                        Novo Atestado
+                                    </button>
+                                </div>
+                            </div>
+
+                            {showForm && (
+                                <div className={`p-6 rounded-xl mb-6 border-2 ${
+                                    darkMode ? 'bg-gray-700 border-indigo-500' : 'bg-indigo-50 border-indigo-200'
+                                }`}>
+                                    <h3 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Adicionar Novo Atestado</h3>
+                                    
+                                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Nome da Atendente</label>
+                                            <input
+                                                type="text"
+                                                value={formData.attendantName}
+                                                onChange={(e) => setFormData({...formData, attendantName: e.target.value})}
+                                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                                    darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                                                }`}
+                                                placeholder="Digite o nome"
+                                            />
+                                        </div>
+                                        
+                                        <div>
+                                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Loja</label>
+                                            <input
+                                                type="text"
+                                                value={formData.store}
+                                                onChange={(e) => setFormData({...formData, store: e.target.value})}
+                                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                                    darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                                                }`}
+                                                placeholder="Nome ou número da loja"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Data</label>
+                                        <input
+                                            type="date"
+                                            value={formData.date}
+                                            onChange={(e) => setFormData({...formData, date: e.target.value})}
+                                            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                                darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                                            }`}
+                                        />
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Foto do Atestado</label>
+                                        <div className="flex items-center gap-4">
+                                            <label className={`flex items-center gap-2 border-2 border-dashed rounded-lg px-6 py-3 cursor-pointer transition-colors ${
+                                                darkMode 
+                                                    ? 'bg-gray-600 border-indigo-400 hover:bg-gray-500' 
+                                                    : 'bg-white border-indigo-300 hover:bg-indigo-50'
+                                            }`}>
+                                                <Camera size={20} className="text-indigo-600" />
+                                                <span className={`font-medium ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Escolher Foto</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleImageUpload}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                            {formData.imagePreview && (
+                                                <img 
+                                                    src={formData.imagePreview} 
+                                                    alt="Preview" 
+                                                    className="h-20 w-20 object-cover rounded-lg border-2 border-indigo-200"
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={handleSubmit}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors"
+                                        >
+                                            Salvar Atestado
+                                        </button>
+                                        <button
+                                            onClick={() => setShowForm(false)}
+                                            className={`px-6 py-2 rounded-lg transition-colors ${
+                                                darkMode 
+                                                    ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' 
+                                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                                            }`}
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex flex-col md:flex-row gap-4 mb-6">
+                                <div className="flex-1 relative">
+                                    <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} size={20} />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por nome ou loja..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                                            darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300'
+                                        }`}
+                                    />
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setFilter('todos')}
+                                        className={`px-4 py-2 rounded-lg transition-colors ${
+                                            filter === 'todos' 
+                                                ? 'bg-indigo-600 text-white' 
+                                                : darkMode 
+                                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        }`}
+                                    >
+                                        Todos ({certificates.length})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilter('pendentes')}
+                                        className={`px-4 py-2 rounded-lg transition-colors ${
+                                            filter === 'pendentes' 
+                                                ? 'bg-indigo-600 text-white' 
+                                                : darkMode 
+                                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        }`}
+                                    >
+                                        Pendentes ({certificates.filter(c => !c.status.physicalDelivery).length})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilter('concluidos')}
+                                        className={`px-4 py-2 rounded-lg transition-colors ${
+                                            filter === 'concluidos' 
+                                                ? 'bg-indigo-600 text-white' 
+                                                : darkMode 
+                                                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        }`}
+                                    >
+                                        Concluídos ({certificates.filter(c => c.status.physicalDelivery).length})
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4">
+                            {filteredCertificates.length === 0 ? (
+                                <div className={`rounded-xl p-12 text-center shadow-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                    <FileText size={64} className={`mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                                    <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        {searchTerm ? 'Nenhum atestado encontrado com essa busca' : 'Nenhum atestado cadastrado ainda'}
+                                    </p>
+                                </div>
+                            ) : (
+                                filteredCertificates.map(cert => (
+                                    <div key={cert.id} className={`${getStatusColor(cert)} border-2 rounded-xl p-5 shadow-lg transition-all hover:shadow-xl ${
+                                        darkMode && 'brightness-90'
+                                    }`}>
+                                        <div className="flex flex-col md:flex-row gap-4">
+                                            <div className="md:w-32 h-32 flex-shrink-0">
+                                                <img 
+                                                    src={cert.image} 
+                                                    alt="Atestado" 
+                                                    className="w-full h-full object-cover rounded-lg border-2 border-gray-300 cursor-pointer hover:scale-105 transition-transform"
+                                                    onClick={() => window.open(cert.image, '_blank')}
+                                                />
+                                            </div>
+                                            
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div>
+                                                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                                            <User size={20} className="text-indigo-600" />
+                                                            {cert.attendantName}
+                                                        </h3>
+                                                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                                                            <span className="flex items-center gap-1">
+                                                                <Building2 size={16} />
+                                                                {cert.store}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <Calendar size={16} />
+                                                                {new Date(cert.date).toLocaleDateString('pt-BR')}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <button
+                                                        onClick={() => deleteCertificate(cert.id)}
+                                                        className="text-red-500 hover:text-red-700 transition-colors"
+                                                        title="Excluir"
+                                                    >
+                                                        <X size={24} />
+                                                    </button>
+                                                </div>
+
+                                                <div className="mb-3">
+                                                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                                                        <span>Progresso</span>
+                                                        <span className="font-semibold">{Math.round(getProgress(cert.status))}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div 
+                                                            className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                                                            style={{ width: `${getProgress(cert.status)}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                    <button
+                                                        onClick={() => updateStatus(cert.id, 'photoReceived')}
+                                                        disabled={cert.status.photoReceived}
+                                                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                                                            cert.status.photoReceived 
+                                                                ? 'bg-green-500 text-white cursor-default' 
+                                                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {cert.status.photoReceived && <Check size={16} />}
+                                                        <span className="text-xs font-medium">Recebido Foto</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => updateStatus(cert.id, 'uploadedToForm')}
+                                                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                                                            cert.status.uploadedToForm 
+                                                                ? 'bg-green-500 text-white' 
+                                                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {cert.status.uploadedToForm && <Check size={16} />}
+                                                        <span className="text-xs font-medium">Enviado ao Formulário</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => updateStatus(cert.id, 'physicallyReceived')}
+                                                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                                                            cert.status.physicallyReceived 
+                                                                ? 'bg-green-500 text-white' 
+                                                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {cert.status.physicallyReceived && <Check size={16} />}
+                                                        <span className="text-xs font-medium">Recebido Fisicamente</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => updateStatus(cert.id, 'physicalDelivery')}
+                                                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                                                            cert.status.physicalDelivery 
+                                                                ? 'bg-green-500 text-white' 
+                                                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {cert.status.physicalDelivery && <Check size={16} />}
+                                                        <span className="text-xs font-medium">Entregue Fisicamente</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<MedicalCertificateTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
