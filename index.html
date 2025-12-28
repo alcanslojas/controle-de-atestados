@@ -15,32 +15,35 @@
         :root { --bg: #000; --card: #111; --text: #fff; --input: #1a1a1a; --border: rgba(255,255,255,0.03); }
         .light-mode { --bg: #f3f4f6; --card: #ffffff; --text: #111; --input: #e5e7eb; --border: rgba(0,0,0,0.05); }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: background 0.3s; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: all 0.3s; }
         .text-alcans { color: #FF5C00; }
         .bg-alcans { background-color: #FF5C00; }
         
-        .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid var(--border); transition: background 0.3s; position: relative; }
+        .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--border); position: relative; }
         
         input { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; font-size: 14px; }
         
-        .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; transition: all 0.2s; cursor: pointer; border: none; }
+        .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; cursor: pointer; border: none; transition: 0.2s; }
         .btn-status.active { background: #FF5C00; color: #fff; box-shadow: 0 0 15px rgba(255, 92, 0, 0.2); }
 
         .progress-segment { flex: 1; height: 6px; border-radius: 10px; background: var(--input); }
         .progress-segment.active { background: #FF5C00; }
 
-        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .tab-btn { padding: 12px 24px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 14px; transition: 0.3s; opacity: 0.4; }
+        .tab-btn.active { opacity: 1; background: #FF5C00; color: white; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #FF5C00; }
-        input:checked + .slider:before { transform: translateX(24px); }
+        input:checked + .slider:before { transform: translateX(22px); }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
 
         const SUPABASE_URL = 'https://zxjegvonpiuyfplkonkb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4amVndm9ucGl1eWZwbGtvbmtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDQwNjMsImV4cCI6MjA4MjQyMDA2M30.P-EkAuX1LiM5hybYYVaaUvMd04LgV7w0-GDkealXbwo';
@@ -50,6 +53,8 @@
             const [files, setFiles] = useState([]);
             const [loading, setLoading] = useState(false);
             const [isDarkMode, setIsDarkMode] = useState(true);
+            const [activeTab, setActiveTab] = useState('novo'); // 'novo' ou 'pesquisa'
+            const [searchTerm, setSearchTerm] = useState('');
 
             useEffect(() => { loadFiles(); }, []);
 
@@ -60,30 +65,33 @@
 
             const loadFiles = async () => {
                 const { data } = await supabaseClient.storage.from('atestados').list();
-                if (data) setFiles(data);
+                if (data) setFiles(data.filter(f => f.name.startsWith('V5-')));
             };
+
+            const filteredFiles = useMemo(() => {
+                return files.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            }, [files, searchTerm]);
 
             const handleEdit = async (oldName) => {
                 const p = oldName.split('-');
-                if (p.length < 5) return;
-
-                const novoNome = prompt("Novo Nome do Colaborador:", p[4].replace(/_/g, ' '));
+                const novoNome = prompt("Nome do Colaborador:", p[4].replace(/_/g, ' '));
                 if (!novoNome) return;
-                const novaLoja = prompt("Nova Loja/Unidade:", p[5].replace(/_/g, ' ').replace('.jpg', ''));
+                const novaLoja = prompt("Loja/Unidade:", p[5].replace(/_/g, ' ').replace('.jpg', ''));
                 if (!novaLoja) return;
+                const dIni = prompt("Data Início (AAAAMMDD):", p[2]);
+                const dFim = prompt("Data Fim (AAAAMMDD):", p[3]);
+                if (!dIni || !dFim) return;
 
                 setLoading(true);
-                const nomeLimpo = novoNome.trim().replace(/[^a-zA-Z0-9]/g, '_');
-                const lojaLimpa = novaLoja.trim().replace(/[^a-zA-Z0-9]/g, '_');
-                
-                // Reconstrói mantendo Status e Datas originais
-                const newName = `${p[0]}-${p[1]}-${p[2]}-${p[3]}-${nomeLimpo}-${lojaLimpa}.jpg`;
+                const nLimpo = novoNome.trim().replace(/[^a-zA-Z0-9]/g, '_');
+                const lLimpa = novaLoja.trim().replace(/[^a-zA-Z0-9]/g, '_');
+                const newName = `V5-${p[1]}-${dIni}-${dFim}-${nLimpo}-${lLimpa}.jpg`;
 
                 try {
                     await supabaseClient.storage.from('atestados').copy(oldName, newName);
                     await supabaseClient.storage.from('atestados').remove([oldName]);
                     await loadFiles();
-                } catch (e) { alert("Erro ao editar: " + e.message); }
+                } catch (e) { alert("Erro: " + e.message); }
                 setLoading(false);
             };
 
@@ -113,104 +121,108 @@
                 const fileName = `V5-ST1-${dInicio}-${dFinal}-${nomeLimpo}-${lojaLimpa}.jpg`;
                 const { error } = await supabaseClient.storage.from('atestados').upload(fileName, file);
                 if (error) alert(error.message);
-                else { form.reset(); loadFiles(); }
+                else { form.reset(); loadFiles(); setActiveTab('pesquisa'); }
                 setLoading(false);
             };
 
-            const deleteFile = async (name) => {
-                if(confirm("Remover registro permanentemente?")) {
-                    await supabaseClient.storage.from('atestados').remove([name]);
-                    loadFiles();
-                }
-            };
-
             return (
-                <div className="max-w-xl mx-auto p-6">
-                    <header className="flex justify-between items-center py-10">
+                <div className="max-w-xl mx-auto p-6 pb-20">
+                    <header className="flex justify-between items-center pt-8 pb-6">
                         <div>
                             <h1 className="text-3xl font-black italic text-alcans leading-none">ALCANS</h1>
                             <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest">Gestão de Atestados</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold opacity-40">{isDarkMode ? '🌙' : '☀️'}</span>
-                            <label className="switch">
-                                <input type="checkbox" checked={!isDarkMode} onChange={toggleTheme} />
-                                <span className="slider"></span>
-                            </label>
-                        </div>
+                        <label className="switch">
+                            <input type="checkbox" checked={!isDarkMode} onChange={toggleTheme} />
+                            <span className="slider"></span>
+                        </label>
                     </header>
 
-                    <div className="card-container shadow-2xl">
-                        <h2 className="text-center font-black mb-6 uppercase tracking-widest text-[10px] opacity-40">Novo Registro</h2>
-                        <form onSubmit={handleUpload} className="space-y-4">
-                            <input name="nome" placeholder="Nome do Colaborador" required />
-                            <input name="loja" placeholder="Loja / Unidade" required />
-                            <div className="flex gap-4">
-                                <div className="flex-1">
-                                    <label className="text-[9px] font-bold opacity-30 ml-2 mb-1 block uppercase">Início</label>
-                                    <input name="dataInicio" type="date" required />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="text-[9px] font-bold opacity-30 ml-2 mb-1 block uppercase">Fim</label>
-                                    <input name="dataFinal" type="date" required />
-                                </div>
-                            </div>
-                            <div className="bg-[#1a1a1a] p-4 rounded-xl border border-white/5">
-                                <input name="foto" type="file" accept="image/*" className="!p-0 text-xs" required />
-                            </div>
-                            <button type="submit" disabled={loading} className="w-full bg-alcans p-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-orange-900/40">
-                                {loading ? "ENVIANDO..." : "SALVAR NO SUPABASE"}
-                            </button>
-                        </form>
+                    {/* NAVEGAÇÃO ENTRE ABAS */}
+                    <div className="flex gap-2 mb-8 bg-[#111] p-1.5 rounded-2xl border border-white/5 shadow-inner">
+                        <button onClick={() => setActiveTab('novo')} className={`tab-btn flex-1 ${activeTab === 'novo' ? 'active' : ''}`}>Inserir Novo</button>
+                        <button onClick={() => setActiveTab('pesquisa')} className={`tab-btn flex-1 ${activeTab === 'pesquisa' ? 'active' : ''}`}>Pesquisar</button>
                     </div>
 
-                    <div className="mt-10 space-y-6">
-                        {files.map(f => {
-                            const p = f.name.split('-');
-                            if (!f.name.startsWith('V5-')) return null;
-
-                            const status = parseInt(p[1].replace('ST', ''));
-                            const dIni = p[2].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1');
-                            const dFim = p[3].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1');
-                            const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
-
-                            return (
-                                <div key={f.name} className="card-container">
-                                    <div className="absolute top-6 right-6 flex gap-4 items-center">
-                                        <button onClick={() => handleEdit(f.name)} className="opacity-30 hover:opacity-100 transition-opacity">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                        <button onClick={() => deleteFile(f.name)} className="opacity-30 hover:text-red-500 hover:opacity-100 transition-all font-bold">✕</button>
+                    {activeTab === 'novo' ? (
+                        <div className="card-container shadow-2xl animate-in fade-in duration-500">
+                            <h2 className="text-center font-black mb-6 uppercase tracking-widest text-[10px] opacity-40">Dados do Atestado</h2>
+                            <form onSubmit={handleUpload} className="space-y-4">
+                                <input name="nome" placeholder="Nome do Colaborador" required />
+                                <input name="loja" placeholder="Loja / Unidade" required />
+                                <div className="flex gap-4">
+                                    <div className="flex-1">
+                                        <label className="text-[9px] font-bold opacity-30 ml-2 mb-1 block uppercase">Início</label>
+                                        <input name="dataInicio" type="date" required />
                                     </div>
-                                    
-                                    <div className="flex gap-5 mb-6">
-                                        <img src={data.publicUrl} className="w-20 h-20 rounded-2xl object-cover bg-black border border-white/5 shadow-lg" />
-                                        <div>
-                                            <h3 className="font-black text-xl uppercase leading-tight">{p[4].replace(/_/g, ' ')}</h3>
-                                            <p className="text-[10px] font-bold text-alcans uppercase">🏢 {p[5].replace(/_/g, ' ').replace('.jpg', '')}</p>
-                                            <div className="flex gap-3 mt-2 text-[9px] font-black opacity-40 uppercase">
-                                                <span>Início: {dIni}</span> <span>Fim: {dFim}</span>
+                                    <div className="flex-1">
+                                        <label className="text-[9px] font-bold opacity-30 ml-2 mb-1 block uppercase">Fim</label>
+                                        <input name="dataFinal" type="date" required />
+                                    </div>
+                                </div>
+                                <div className="bg-[#1a1a1a] p-4 rounded-xl border border-white/5">
+                                    <input name="foto" type="file" accept="image/*" className="!p-0 text-xs" required />
+                                </div>
+                                <button type="submit" disabled={loading} className="w-full bg-alcans p-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-orange-900/40">
+                                    {loading ? "SALVANDO..." : "SALVAR NO SUPABASE"}
+                                </button>
+                            </form>
+                        </div>
+                    ) : (
+                        <div className="animate-in fade-in duration-500">
+                            <div className="mb-8">
+                                <input 
+                                    placeholder="🔍 Digite nome ou unidade para buscar..." 
+                                    className="!bg-alcans/10 !border !border-alcans/20 !text-alcans placeholder:text-alcans/40"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-6">
+                                {filteredFiles.length === 0 && <p className="text-center opacity-20 py-10 font-bold uppercase text-xs">Nenhum registro encontrado</p>}
+                                {filteredFiles.map(f => {
+                                    const p = f.name.split('-');
+                                    const status = parseInt(p[1].replace('ST', ''));
+                                    const dIni = p[2].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1');
+                                    const dFim = p[3].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1');
+                                    const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
+
+                                    return (
+                                        <div key={f.name} className="card-container">
+                                            <div className="absolute top-6 right-6 flex gap-4 items-center">
+                                                <button onClick={() => handleEdit(f.name)} className="opacity-30 hover:opacity-100">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                </button>
+                                                <button onClick={async () => {if(confirm("Excluir?")){await supabaseClient.storage.from('atestados').remove([f.name]); loadFiles();}}} className="opacity-30 hover:text-red-500 font-bold">✕</button>
+                                            </div>
+                                            <div className="flex gap-5 mb-6">
+                                                <img src={data.publicUrl} className="w-20 h-20 rounded-2xl object-cover bg-black border border-white/5" />
+                                                <div>
+                                                    <h3 className="font-black text-xl uppercase leading-tight">{p[4].replace(/_/g, ' ')}</h3>
+                                                    <p className="text-[10px] font-bold text-alcans uppercase">🏢 {p[5].replace(/_/g, ' ').replace('.jpg', '')}</p>
+                                                    <div className="flex gap-3 mt-2 text-[9px] font-black opacity-40 uppercase">
+                                                        <span>Início: {dIni}</span> <span>Fim: {dFim}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-end mb-2 text-[9px] font-black opacity-20 uppercase">
+                                                <span>Progresso</span>
+                                                <span className="text-alcans opacity-100">{(status/4)*100}%</span>
+                                            </div>
+                                            <div className="flex gap-2 mb-4">
+                                                {[1,2,3,4].map(s => <div key={s} className={`progress-segment ${status >= s ? 'active' : ''}`} />)}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {['Foto','Form','Físico','DP'].map((label, i) => (
+                                                    <button key={i} onClick={() => atualizarStatus(f.name, i+1)} className={`btn-status ${status >= i+1 ? 'active' : ''}`}>{label}</button>
+                                                ))}
                                             </div>
                                         </div>
-                                    </div>
-                                    
-                                    <div className="flex justify-between items-end mb-2 text-[9px] font-black opacity-20 uppercase">
-                                        <span>Progresso do Atestado</span>
-                                        <span className="text-alcans opacity-100">{(status/4)*100}%</span>
-                                    </div>
-                                    <div className="flex gap-2 mb-4">
-                                        {[1,2,3,4].map(s => <div key={s} className={`progress-segment ${status >= s ? 'active' : ''}`} />)}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => atualizarStatus(f.name, 1)} className={`btn-status ${status >= 1 ? 'active' : ''}`}>Recebido</button>
-                                        <button onClick={() => atualizarStatus(f.name, 2)} className={`btn-status ${status >= 2 ? 'active' : ''}`}>Form</button>
-                                        <button onClick={() => atualizarStatus(f.name, 3)} className={`btn-status ${status >= 3 ? 'active' : ''}`}>Físico</button>
-                                        <button onClick={() => atualizarStatus(f.name, 4)} className={`btn-status ${status >= 4 ? 'active' : ''}`}>DP</button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
