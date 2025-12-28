@@ -11,14 +11,17 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; margin: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; margin: 0; }
         .text-alcans { color: #FF5C00; }
         .bg-alcans { background-color: #FF5C00; }
-        .progress-bg { height: 6px; border-radius: 10px; width: 100%; background: rgba(128,128,128,0.1); overflow: hidden; }
-        .progress-fill { height: 100%; background: #FF5C00; transition: width 0.5s ease; }
+        .card-atestado { background: #111; border: 1px solid rgba(255,255,255,0.05); border-radius: 1.5rem; padding: 1.5rem; }
+        .progress-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); flex: 1; position: relative; }
+        .progress-fill { height: 100%; background: #FF5C00; border-radius: 2px; transition: width 0.3s; }
+        .btn-step { font-size: 9px; font-weight: 900; padding: 8px 12px; border-radius: 8px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
+        .btn-step.active { background: #FF5C00; border-color: #FF5C00; color: #fff; box-shadow: 0 0 15px rgba(255,92,0,0.3); }
     </style>
 </head>
-<body class="bg-black text-white">
+<body>
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect } = React;
@@ -27,108 +30,148 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4amVndm9ucGl1eWZwbGtvbmtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDQwNjMsImV4cCI6MjA4MjQyMDA2M30.P-EkAuX1LiM5hybYYVaaUvMd04LgV7w0-GDkealXbwo';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        const STEPS = [
+            { id: 1, label: "Recebido Foto", key: "ST1" },
+            { id: 2, label: "Subiu Form", key: "ST2" },
+            { id: 3, label: "Físico", key: "ST3" },
+            { id: 4, label: "Entregue DP", key: "ST4" }
+        ];
+
         const App = () => {
             const [view, setView] = useState('list');
             const [files, setFiles] = useState([]);
+            const [search, setSearch] = useState('');
             const [loading, setLoading] = useState(false);
             const [form, setForm] = useState({ name: '', store: '', start: '', end: '', file: null });
 
             useEffect(() => { loadFiles(); }, []);
 
             const loadFiles = async () => {
-                const { data } = await supabaseClient.storage.from('atestados').list();
+                const { data } = await supabaseClient.storage.from('atestados').list('', { sortBy: { column: 'name', order: 'desc' } });
                 if (data) setFiles(data);
             };
 
             const clean = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_") : "DOC";
 
-            // EXCLUSÃO SEGURA: Deleta o arquivo pelo nome exato, sem tentar interpretar o conteúdo
-            const handleDelete = async (fileName) => {
-                if(!confirm("Deseja realmente excluir este registro?")) return;
-                setLoading(true);
-                const { error } = await supabaseClient.storage.from('atestados').remove([fileName]);
-                if (error) alert("Erro ao excluir: " + error.message);
-                await loadFiles();
-                setLoading(false);
-            };
-
-            const handleUpdate = async (file, newProps) => {
+            const handleAction = async (file, actionType, payload = {}) => {
                 setLoading(true);
                 try {
-                    const p = file.name.split('-');
-                    // Fallback para nomes corrompidos
-                    const step = newProps.step || (p[1] || 'ST1');
-                    const start = newProps.start || (p[2] || '0000-00-00');
-                    const end = newProps.end || (p[3] || '0000-00-00');
-                    const name = clean(newProps.name || p[4] || 'S_NOME');
-                    const store = clean(newProps.store || p[5] || 'S_LOJA');
-                    const suffix = p[6] || `${Date.now()}.jpg`;
+                    if (actionType === 'delete') {
+                        await supabaseClient.storage.from('atestados').remove([file.name]);
+                    } else if (actionType === 'update') {
+                        const p = file.name.split('-');
+                        const step = payload.step || p[1] || 'ST1';
+                        const start = payload.start || p[2] || '0000-00-00';
+                        const end = payload.end || p[3] || '0000-00-00';
+                        const name = clean(payload.name || p[4] || 'S_NOME');
+                        const store = clean(payload.store || p[5] || 'S_LOJA');
+                        const suffix = p[6] || `${Date.now()}.jpg`;
 
-                    const newName = `V5-${step}-${start}-${end}-${name}-${store}-${suffix}`;
-                    
-                    const { error: copyError } = await supabaseClient.storage.from('atestados').copy(file.name, newName);
-                    if (!copyError) await supabaseClient.storage.from('atestados').remove([file.name]);
+                        const newName = `V5-${step}-${start}-${end}-${name}-${store}-${suffix}`;
+                        const { error: copyError } = await supabaseClient.storage.from('atestados').copy(file.name, newName);
+                        if (!copyError) await supabaseClient.storage.from('atestados').remove([file.name]);
+                    }
                     await loadFiles();
-                } catch (e) {
-                    alert("Erro ao processar arquivo: " + e.message);
-                }
+                } catch (e) { alert("Erro na operação"); }
                 setLoading(false);
             };
 
             const handleUpload = async () => {
-                if (!form.file || !form.name) return alert("Preencha Nome e selecione a Foto!");
+                if (!form.file || !form.name) return alert("Preencha os campos!");
                 setLoading(true);
                 const ext = form.file.name.split('.').pop();
                 const fileName = `V5-ST1-${form.start || '0000-00-00'}-${form.end || '0000-00-00'}-${clean(form.name)}-${clean(form.store)}-${Date.now()}.${ext}`;
-                const { error } = await supabaseClient.storage.from('atestados').upload(fileName, form.file);
-                if (!error) { setForm({ name: '', store: '', start: '', end: '', file: null }); setView('list'); await loadFiles(); }
+                await supabaseClient.storage.from('atestados').upload(fileName, form.file);
+                setView('list');
+                await loadFiles();
                 setLoading(false);
             };
 
             return (
-                <div className="min-h-screen p-4 flex flex-col items-center">
-                    {loading && <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center font-bold text-alcans">CARREGANDO...</div>}
+                <div className="min-h-screen p-4 max-w-2xl mx-auto">
+                    {loading && <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center font-black text-alcans tracking-widest">PROCESSANDO...</div>}
                     
-                    <header className="w-full max-w-xl flex justify-between py-6">
-                        <h1 className="text-2xl font-black text-alcans italic">ALCANS</h1>
-                        <button onClick={() => setView(view === 'list' ? 'add' : 'list')} className="bg-alcans px-6 py-2 rounded-full font-bold text-[10px] uppercase">
+                    <header className="flex justify-between items-center py-8">
+                        <div>
+                            <h1 className="text-3xl font-black italic text-alcans leading-none">ALCANS</h1>
+                            <p className="text-[10px] uppercase tracking-widest opacity-40 font-bold">Gestão de Atestados</p>
+                        </div>
+                        <button onClick={() => setView(view === 'list' ? 'add' : 'list')} className="bg-alcans text-white px-6 py-3 rounded-full font-black text-[11px] tracking-tighter">
                             {view === 'list' ? '+ NOVO REGISTRO' : 'VOLTAR'}
                         </button>
                     </header>
 
-                    <main className="w-full max-w-xl">
-                        {view === 'add' ? (
-                            <div className="bg-[#111] p-6 rounded-3xl border border-white/5 space-y-4">
-                                <input type="text" placeholder="Nome do Colaborador" className="w-full bg-white/5 p-4 rounded-xl outline-none" onChange={e => setForm({...form, name: e.target.value})} />
-                                <input type="text" placeholder="Loja" className="w-full bg-white/5 p-4 rounded-xl outline-none" onChange={e => setForm({...form, store: e.target.value})} />
-                                <div className="grid grid-cols-2 gap-2">
-                                    <input type="date" className="bg-white/5 p-4 rounded-xl text-xs" onChange={e => setForm({...form, start: e.target.value})} />
-                                    <input type="date" className="bg-white/5 p-4 rounded-xl text-xs" onChange={e => setForm({...form, end: e.target.value})} />
-                                </div>
-                                <input type="file" className="text-xs" onChange={e => setForm({...form, file: e.target.files[0]})} />
-                                <button onClick={handleUpload} className="w-full bg-alcans py-4 rounded-xl font-bold">SALVAR NO SUPABASE</button>
+                    {view === 'add' ? (
+                        <div className="card-atestado space-y-4">
+                            <input type="text" placeholder="Nome do Colaborador" className="w-full bg-white/5 p-4 rounded-xl outline-none border border-white/10" onChange={e => setForm({...form, name: e.target.value})} />
+                            <input type="text" placeholder="Cidade/Unidade" className="w-full bg-white/5 p-4 rounded-xl outline-none border border-white/10" onChange={e => setForm({...form, store: e.target.value})} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <input type="date" className="bg-white/5 p-4 rounded-xl text-xs border border-white/10" onChange={e => setForm({...form, start: e.target.value})} />
+                                <input type="date" className="bg-white/5 p-4 rounded-xl text-xs border border-white/10" onChange={e => setForm({...form, end: e.target.value})} />
                             </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {files.map(f => {
-                                    const p = f.name.split('-');
-                                    const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
-                                    return (
-                                        <div key={f.id} className="bg-[#111] p-4 rounded-2xl border border-white/5 flex gap-4 items-center">
-                                            <img src={data.publicUrl} className="w-16 h-16 object-cover rounded-lg bg-black" onError={(e) => e.target.src='https://via.placeholder.com/150?text=Erro'} />
+                            <input type="file" className="text-xs opacity-50 block w-full" onChange={e => setForm({...form, file: e.target.files[0]})} />
+                            <button onClick={handleUpload} className="w-full bg-alcans py-4 rounded-xl font-black uppercase tracking-widest text-sm shadow-lg shadow-orange-600/20">Confirmar Envio</button>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <input type="text" placeholder="Pesquisar registros..." className="w-full bg-[#111] p-5 rounded-2xl outline-none border border-white/5" onChange={e => setSearch(e.target.value)} />
+                            
+                            {files.filter(f => f.name.toLowerCase().includes(search.toLowerCase())).map(f => {
+                                const p = f.name.split('-');
+                                const currentStep = parseInt(p[1]?.replace('ST', '') || '1');
+                                const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
+                                
+                                return (
+                                    <div key={f.id} className="card-atestado relative overflow-hidden">
+                                        <div className="flex gap-5 items-start mb-6">
+                                            <img src={data.publicUrl} className="w-20 h-20 object-cover rounded-2xl bg-black border border-white/10 cursor-pointer" onClick={() => window.open(data.publicUrl)} />
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="font-bold text-xs truncate uppercase">{p[4]?.replace(/_/g, ' ') || 'Arquivo Antigo'}</h3>
-                                                <p className="text-[10px] opacity-50 truncate">{p[5] || 'Sem Unidade'} • {p[2] || 'Sem Data'}</p>
-                                            </div>
-                                            <div className="flex gap-4">
-                                                <button onClick={() => handleDelete(f.name)} className="text-red-500 font-bold text-lg">✕</button>
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="font-black text-sm uppercase truncate text-white">{p[4]?.replace(/_/g, ' ') || 'S/ NOME'}</h3>
+                                                        <p className="text-[10px] font-bold text-alcans opacity-80 uppercase tracking-tighter">🏢 {p[5]?.replace(/_/g, ' ') || 'S/ UNIDADE'}</p>
+                                                        <p className="text-[9px] font-medium opacity-40 mt-1">📅 Início: {p[2]?.split('-').reverse().join('/') || '--/--/----'}</p>
+                                                    </div>
+                                                    <div className="flex gap-3">
+                                                        <button onClick={() => {
+                                                            const nName = prompt("Novo Nome:", p[4].replace(/_/g, ' '));
+                                                            if(nName) handleAction(f, 'update', { name: nName });
+                                                        }} className="opacity-20 hover:opacity-100 text-alcans">✎</button>
+                                                        <button onClick={() => { if(confirm('Remover registro?')) handleAction(f, 'delete'); }} className="opacity-20 hover:opacity-100 text-red-500 font-bold text-lg">✕</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </main>
+
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest opacity-40">
+                                                <span>Progresso do Atestado</span>
+                                                <span className="text-alcans">{(currentStep/4)*100}%</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {[1,2,3,4].map(s => (
+                                                    <div key={s} className="progress-bar">
+                                                        <div className="progress-fill" style={{ width: currentStep >= s ? '100%' : '0%' }}></div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {STEPS.map(s => (
+                                                    <button 
+                                                        key={s.id} 
+                                                        onClick={() => handleAction(f, 'update', { step: s.key })}
+                                                        className={`btn-step ${currentStep >= s.id ? 'active' : 'opacity-20'}`}
+                                                    >
+                                                        {s.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             );
         };
