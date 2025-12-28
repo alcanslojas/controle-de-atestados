@@ -11,18 +11,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s; margin: 0; }
+        body { font-family: 'Inter', sans-serif; margin: 0; }
         .text-alcans { color: #FF5C00; }
         .bg-alcans { background-color: #FF5C00; }
         .progress-bg { height: 6px; border-radius: 10px; width: 100%; background: rgba(128,128,128,0.1); overflow: hidden; }
         .progress-fill { height: 100%; background: #FF5C00; transition: width 0.5s ease; }
-        .month-divider { position: relative; text-align: center; margin: 2rem 0 1rem; }
-        .month-divider::before { content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 1px; background: rgba(128,128,128,0.2); z-index: 1; }
-        .month-label { position: relative; z-index: 2; padding: 0 15px; font-weight: 900; text-transform: uppercase; font-size: 11px; letter-spacing: 0.1em; background: inherit; color: #FF5C00; }
-        .switch-container { width: 44px; height: 22px; background-color: #333; border-radius: 50px; position: relative; cursor: pointer; display: flex; align-items: center; padding: 0 3px; }
-        .light .switch-container { background-color: #ccc; }
-        .switch-handle { width: 16px; height: 16px; background-color: white; border-radius: 50%; transition: transform 0.3s; display: flex; align-items: center; justify-content: center; font-size: 9px; }
-        .dark .switch-handle { transform: translateX(22px); }
     </style>
 </head>
 <body class="bg-black text-white">
@@ -34,186 +27,105 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4amVndm9ucGl1eWZwbGtvbmtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDQwNjMsImV4cCI6MjA4MjQyMDA2M30.P-EkAuX1LiM5hybYYVaaUvMd04LgV7w0-GDkealXbwo';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const STEPS = [
-            { id: 1, label: "Recebido Foto" },
-            { id: 2, label: "Subiu no Formulário" },
-            { id: 3, label: "Recebido Fisicamente" },
-            { id: 4, label: "Entregue ao DP" }
-        ];
-
         const App = () => {
             const [view, setView] = useState('list');
             const [files, setFiles] = useState([]);
-            const [search, setSearch] = useState('');
-            const [isDark, setIsDark] = useState(true);
             const [loading, setLoading] = useState(false);
             const [form, setForm] = useState({ name: '', store: '', start: '', end: '', file: null });
 
-            useEffect(() => {
-                loadFiles();
-                document.body.className = isDark ? 'bg-black text-white dark' : 'bg-gray-50 text-black light';
-            }, [isDark]);
+            useEffect(() => { loadFiles(); }, []);
 
             const loadFiles = async () => {
-                const { data } = await supabaseClient.storage.from('atestados').list('', { sortBy: { column: 'name', order: 'desc' } });
-                if (data) setFiles(data.filter(f => f.name.startsWith('V5-')));
+                const { data } = await supabaseClient.storage.from('atestados').list();
+                if (data) setFiles(data);
             };
 
-            const clean = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_") : "S_N";
+            const clean = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_") : "DOC";
 
-            const handleUpdateFileName = async (oldName, newAttributes) => {
+            // EXCLUSÃO SEGURA: Deleta o arquivo pelo nome exato, sem tentar interpretar o conteúdo
+            const handleDelete = async (fileName) => {
+                if(!confirm("Deseja realmente excluir este registro?")) return;
+                setLoading(true);
+                const { error } = await supabaseClient.storage.from('atestados').remove([fileName]);
+                if (error) alert("Erro ao excluir: " + error.message);
+                await loadFiles();
+                setLoading(false);
+            };
+
+            const handleUpdate = async (file, newProps) => {
                 setLoading(true);
                 try {
-                    const p = oldName.split('-');
-                    // Preservar valores antigos se os novos não forem passados
-                    const step = newAttributes.step || p[1];
-                    const start = newAttributes.start || p[2];
-                    const end = newAttributes.end || p[3];
-                    const name = clean(newAttributes.name) || p[4];
-                    const store = clean(newAttributes.store) || p[5];
-                    const suffix = p[6]; // Mantém ID e Extensão (Ex: 173541234.jpg)
+                    const p = file.name.split('-');
+                    // Fallback para nomes corrompidos
+                    const step = newProps.step || (p[1] || 'ST1');
+                    const start = newProps.start || (p[2] || '0000-00-00');
+                    const end = newProps.end || (p[3] || '0000-00-00');
+                    const name = clean(newProps.name || p[4] || 'S_NOME');
+                    const store = clean(newProps.store || p[5] || 'S_LOJA');
+                    const suffix = p[6] || `${Date.now()}.jpg`;
 
                     const newName = `V5-${step}-${start}-${end}-${name}-${store}-${suffix}`;
-
-                    const { error: copyError } = await supabaseClient.storage.from('atestados').copy(oldName, newName);
-                    if (copyError) throw copyError;
-
-                    await supabaseClient.storage.from('atestados').remove([oldName]);
+                    
+                    const { error: copyError } = await supabaseClient.storage.from('atestados').copy(file.name, newName);
+                    if (!copyError) await supabaseClient.storage.from('atestados').remove([file.name]);
                     await loadFiles();
-                } catch (err) {
-                    alert("Erro na operação: " + err.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            const handleEdit = (file) => {
-                const p = file.name.split('-');
-                const nName = prompt("Nome do Colaborador:", p[4].replace(/_/g, ' '));
-                if (nName === null) return;
-                const nStore = prompt("Cidade/Unidade:", p[5].replace(/_/g, ' '));
-                if (nStore === null) return;
-                const nStart = prompt("Data Início (AAAA-MM-DD):", p[2]);
-                if (nStart === null) return;
-                const nEnd = prompt("Data Fim (AAAA-MM-DD):", p[3]);
-                if (nEnd === null) return;
-
-                handleUpdateFileName(file.name, { name: nName, store: nStore, start: nStart, end: nEnd });
-            };
-
-            const handleUpload = async () => {
-                if (!form.file || !form.name) return alert("Preencha os campos!");
-                setLoading(true);
-                const ext = form.file.name.split('.').pop();
-                const fileName = `V5-ST1-${form.start || '0000-00-00'}-${form.end || '0000-00-00'}-${clean(form.name)}-${clean(form.store)}-${Date.now()}.${ext}`;
-                
-                const { error } = await supabaseClient.storage.from('atestados').upload(fileName, form.file);
-                if (!error) {
-                    setForm({ name: '', store: '', start: '', end: '', file: null });
-                    setView('list');
-                    await loadFiles();
-                } else {
-                    alert("Erro no upload: " + error.message);
+                } catch (e) {
+                    alert("Erro ao processar arquivo: " + e.message);
                 }
                 setLoading(false);
             };
 
-            const groupFilesByMonth = (filesList) => {
-                const filtered = filesList.filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
-                const groups = {};
-                filtered.forEach(f => {
-                    const parts = f.name.split('-');
-                    const date = new Date(parts[2] + 'T12:00:00');
-                    const monthYear = isNaN(date.getTime()) ? "Outros/Sem Data" : date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-                    if (!groups[monthYear]) groups[monthYear] = [];
-                    groups[monthYear].push(f);
-                });
-                return groups;
+            const handleUpload = async () => {
+                if (!form.file || !form.name) return alert("Preencha Nome e selecione a Foto!");
+                setLoading(true);
+                const ext = form.file.name.split('.').pop();
+                const fileName = `V5-ST1-${form.start || '0000-00-00'}-${form.end || '0000-00-00'}-${clean(form.name)}-${clean(form.store)}-${Date.now()}.${ext}`;
+                const { error } = await supabaseClient.storage.from('atestados').upload(fileName, form.file);
+                if (!error) { setForm({ name: '', store: '', start: '', end: '', file: null }); setView('list'); await loadFiles(); }
+                setLoading(false);
             };
 
-            const groupedFiles = groupFilesByMonth(files);
-
             return (
-                <div className="min-h-screen flex flex-col items-center p-4">
-                    {loading && <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center font-black text-alcans animate-pulse">PROCESSANDO...</div>}
+                <div className="min-h-screen p-4 flex flex-col items-center">
+                    {loading && <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center font-bold text-alcans">CARREGANDO...</div>}
                     
-                    <header className="w-full max-w-2xl flex justify-between items-center py-6 mb-2">
-                        <div className="flex flex-col">
-                            <h1 className="text-2xl font-black italic text-alcans tracking-tighter leading-none">ALCANS</h1>
-                            <p className="text-[9px] uppercase tracking-[0.2em] font-bold mt-1 opacity-50">Registros de Atestados</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="switch-container" onClick={() => setIsDark(!isDark)}>
-                                <div className="switch-handle">{isDark ? '🌙' : '☀️'}</div>
-                            </div>
-                            <button onClick={() => setView(view === 'list' ? 'add' : 'list')} className="bg-alcans text-white px-6 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest active:scale-95 transition">
-                                {view === 'list' ? '+ Novo Registro' : 'Voltar'}
-                            </button>
-                        </div>
+                    <header className="w-full max-w-xl flex justify-between py-6">
+                        <h1 className="text-2xl font-black text-alcans italic">ALCANS</h1>
+                        <button onClick={() => setView(view === 'list' ? 'add' : 'list')} className="bg-alcans px-6 py-2 rounded-full font-bold text-[10px] uppercase">
+                            {view === 'list' ? '+ NOVO REGISTRO' : 'VOLTAR'}
+                        </button>
                     </header>
 
-                    <main className="w-full max-w-2xl">
+                    <main className="w-full max-w-xl">
                         {view === 'add' ? (
-                            <div className={`max-w-md mx-auto ${isDark ? 'bg-[#111] border-white/5' : 'bg-white border-black/5 shadow-xl'} p-8 rounded-[2.5rem] border space-y-4`}>
-                                <input type="text" placeholder="Nome do Colaborador" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-                                <input type="text" placeholder="Cidade / Unidade" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none" value={form.store} onChange={e => setForm({...form, store: e.target.value})} />
-                                <div className="grid grid-cols-2 gap-4 text-xs">
-                                    <input type="date" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none" value={form.start} onChange={e => setForm({...form, start: e.target.value})} />
-                                    <input type="date" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none" value={form.end} onChange={e => setForm({...form, end: e.target.value})} />
+                            <div className="bg-[#111] p-6 rounded-3xl border border-white/5 space-y-4">
+                                <input type="text" placeholder="Nome do Colaborador" className="w-full bg-white/5 p-4 rounded-xl outline-none" onChange={e => setForm({...form, name: e.target.value})} />
+                                <input type="text" placeholder="Loja" className="w-full bg-white/5 p-4 rounded-xl outline-none" onChange={e => setForm({...form, store: e.target.value})} />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input type="date" className="bg-white/5 p-4 rounded-xl text-xs" onChange={e => setForm({...form, start: e.target.value})} />
+                                    <input type="date" className="bg-white/5 p-4 rounded-xl text-xs" onChange={e => setForm({...form, end: e.target.value})} />
                                 </div>
-                                <div className="border-2 border-dashed border-white/10 p-6 rounded-2xl text-center">
-                                    <input type="file" className="text-xs opacity-50" onChange={e => setForm({...form, file: e.target.files[0]})} />
-                                </div>
-                                <button onClick={handleUpload} className="w-full bg-alcans py-4 rounded-2xl font-black text-white uppercase tracking-widest text-sm">SALVAR</button>
+                                <input type="file" className="text-xs" onChange={e => setForm({...form, file: e.target.files[0]})} />
+                                <button onClick={handleUpload} className="w-full bg-alcans py-4 rounded-xl font-bold">SALVAR NO SUPABASE</button>
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                <input type="text" placeholder="Pesquisar..." className={`w-full ${isDark ? 'bg-[#111] border-white/5' : 'bg-white border-black/10 shadow-sm'} p-4 rounded-2xl border outline-none mb-6`} onChange={e => setSearch(e.target.value)} />
-                                
-                                {Object.keys(groupedFiles).map(month => (
-                                    <div key={month} className="mb-8">
-                                        <div className="month-divider"><span className="month-label">{month}</span></div>
-                                        <div className="space-y-4">
-                                            {groupedFiles[month].map(f => {
-                                                const p = f.name.split('-');
-                                                const step = parseInt(p[1]?.replace('ST', '') || '1');
-                                                const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
-                                                return (
-                                                    <div key={f.id} className={`${isDark ? 'bg-[#111] border-white/5' : 'bg-white border-black/5 shadow-md'} p-4 rounded-[1.5rem] border relative`}>
-                                                        <div className="flex gap-4">
-                                                            <img src={data.publicUrl} className="w-20 h-20 object-cover rounded-xl bg-black cursor-pointer shadow-md" onClick={() => window.open(data.publicUrl)} />
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex justify-between items-start">
-                                                                    <div className="flex-1 truncate mr-2">
-                                                                        <h3 className="font-black uppercase text-[11px] truncate">👤 {p[4]?.replace(/_/g, ' ') || 'S/ NOME'}</h3>
-                                                                        <p className="text-[9px] font-bold opacity-40 uppercase truncate">🏢 {p[5]?.replace(/_/g, ' ') || 'S/ LOJA'} • 📅 {p[2]?.split('-').reverse().join('/')}</p>
-                                                                    </div>
-                                                                    <div className="flex gap-3 items-center">
-                                                                        <button onClick={() => handleEdit(f)} className="text-alcans opacity-40 hover:opacity-100 transition">
-                                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                                                        </button>
-                                                                        <button onClick={async () => { if(confirm('Remover?')) { setLoading(true); await supabaseClient.storage.from('atestados').remove([f.name]); await loadFiles(); setLoading(false); } }} className="text-red-500 opacity-30 hover:opacity-100">✕</button>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="mt-3 mb-3">
-                                                                    <div className="flex justify-between items-center mb-1 text-[8px] font-black uppercase opacity-40"><span>Progresso</span><span className="text-alcans">{(step/4)*100}%</span></div>
-                                                                    <div className="progress-bg"><div className="progress-fill" style={{ width: `${(step/4)*100}%` }}></div></div>
-                                                                </div>
-                                                                <div className="flex justify-between items-center">
-                                                                    <div className="flex gap-1">{STEPS.map(s => (<div key={s.id} className={`w-1.5 h-1.5 rounded-full ${step >= s.id ? 'bg-alcans' : 'bg-gray-500/20'}`}></div>))}</div>
-                                                                    <div className="flex gap-2">
-                                                                        <button onClick={() => handleUpdateFileName(f.name, { step: `ST${step-1}` })} disabled={step === 1} className="bg-gray-500/10 text-[8px] px-2 py-1 rounded font-black uppercase disabled:opacity-0 transition">Retornar</button>
-                                                                        <button onClick={() => handleUpdateFileName(f.name, { step: `ST${step+1}` })} disabled={step === 4} className="bg-alcans text-white text-[8px] px-2 py-1 rounded font-black uppercase disabled:opacity-0 transition">Avançar</button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
+                            <div className="space-y-4">
+                                {files.map(f => {
+                                    const p = f.name.split('-');
+                                    const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
+                                    return (
+                                        <div key={f.id} className="bg-[#111] p-4 rounded-2xl border border-white/5 flex gap-4 items-center">
+                                            <img src={data.publicUrl} className="w-16 h-16 object-cover rounded-lg bg-black" onError={(e) => e.target.src='https://via.placeholder.com/150?text=Erro'} />
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-bold text-xs truncate uppercase">{p[4]?.replace(/_/g, ' ') || 'Arquivo Antigo'}</h3>
+                                                <p className="text-[10px] opacity-50 truncate">{p[5] || 'Sem Unidade'} • {p[2] || 'Sem Data'}</p>
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <button onClick={() => handleDelete(f.name)} className="text-red-500 font-bold text-lg">✕</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </main>
