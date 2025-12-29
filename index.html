@@ -11,20 +11,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        :root { --bg: #000; --card: #111; --text: #fff; --input: #1a1a1a; --border: rgba(255,255,255,0.03); }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; }
-        .text-alcans { color: #FF5C00; }
-        .bg-alcans { background-color: #FF5C00; }
-        .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--border); position: relative; }
-        input { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; font-size: 14px; }
-        .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; cursor: pointer; border: none; transition: 0.2s; }
-        .btn-status.active { background: #FF5C00; color: #fff; }
-        .progress-segment { flex: 1; height: 6px; border-radius: 10px; background: var(--input); transition: 0.3s; }
-        .progress-segment.active { background: #FF5C00; }
-        .tab-btn { padding: 12px 24px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 14px; transition: 0.3s; opacity: 0.4; }
-        .tab-btn.active { opacity: 1; background: #FF5C00; color: white; }
+        :root { --bg: #000; --card: #111; --text: #fff; --alcans: #FF5C00; --input: #1a1a1a; --border: rgba(255,255,255,0.05); }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
+        .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--border); position: relative; border-left: 4px solid var(--alcans); }
+        input { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; }
+        .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; cursor: pointer; transition: 0.2s; border: none; }
+        .btn-status.active { background: var(--alcans); color: #fff; }
+        .progress-segment { flex: 1; height: 6px; border-radius: 10px; background: var(--input); }
+        .progress-segment.active { background: var(--alcans); }
+        .tab-btn { padding: 12px 24px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 14px; opacity: 0.4; transition: 0.3s; }
+        .tab-btn.active { opacity: 1; background: var(--alcans); color: white; }
         .cluster-opt { flex: 1; padding: 10px; border-radius: 12px; background: var(--input); font-size: 10px; font-weight: 900; text-align: center; cursor: pointer; opacity: 0.4; border: 1px solid transparent; }
-        .cluster-opt.active { opacity: 1; border-color: #FF5C00; color: #FF5C00; background: rgba(255,92,0,0.05); }
+        .cluster-opt.active { opacity: 1; border-color: var(--alcans); color: var(--alcans); background: rgba(255,92,0,0.05); }
     </style>
 </head>
 <body>
@@ -53,7 +51,7 @@
                 }
             };
 
-            const limparParaURL = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+            const limparParaURL = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
 
             const groupedFiles = useMemo(() => {
                 const clusterPrefix = `V5-${selectedCluster}`;
@@ -84,16 +82,15 @@
                     form.reset();
                     await loadFiles();
                     setActiveTab('pesquisa');
-                } catch (e) { alert(e.message); }
+                } catch (e) { alert("Erro ao salvar!"); }
                 setLoading(false);
             };
 
             const atualizarInfo = async (oldName) => {
                 const p = oldName.split('-');
-                const novoNome = prompt("Novo nome do colaborador:", p[5].replace(/_/g, ' '));
-                const novaLoja = prompt("Nova loja/unidade:", p[6].replace(/_/g, ' ').replace('.jpg', ''));
+                const novoNome = prompt("Novo nome:", p[5].replace(/_/g, ' '));
+                const novaLoja = prompt("Nova loja:", p[6].replace(/_/g, ' ').replace('.jpg', ''));
                 if (!novoNome || !novaLoja) return;
-
                 setLoading(true);
                 p[5] = limparParaURL(novoNome);
                 p[6] = `${limparParaURL(novaLoja)}.jpg`;
@@ -116,10 +113,10 @@
             };
 
             return (
-                <div className="max-w-xl mx-auto p-6 pb-20">
+                <div className="max-w-xl mx-auto p-6">
                     <header className="pt-8 pb-6 text-center">
-                        <h1 className="text-3xl font-black italic text-[#FF5C00] uppercase">ALCANS</h1>
-                        <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest mt-1">Painel de Líderes</p>
+                        <h1 className="text-3xl font-black italic text-[#FF5C00] uppercase tracking-tighter">ALCANS</h1>
+                        <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest mt-1">Gestão de Atestados</p>
                     </header>
 
                     <div className="flex gap-2 mb-6">
@@ -144,40 +141,45 @@
                                 </div>
                                 <input name="foto" type="file" accept="image/*" className="!p-4 text-xs" required />
                                 <button type="submit" disabled={loading} className="w-full bg-[#FF5C00] p-5 rounded-2xl font-black uppercase text-sm">
-                                    {loading ? "ENVIANDO..." : "SALVAR"}
+                                    {loading ? "ENVIANDO..." : "SALVAR NO SUPABASE"}
                                 </button>
                             </form>
                         </div>
                     ) : (
                         <div>
-                            <input placeholder={`🔍 Buscar em ${selectedCluster}...`} className="mb-6 !bg-[#FF5C00]/10 !text-[#FF5C00]" onChange={(e) => setSearchTerm(e.target.value)} />
+                            <div className="relative mb-6">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2">🔍</span>
+                                <input placeholder={`Buscar em ${selectedCluster}...`} className="!pl-10 !bg-[#FF5C00]/5 !text-[#FF5C00]" onChange={(e) => setSearchTerm(e.target.value)} />
+                            </div>
+                            
                             {Object.entries(groupedFiles).map(([month, items]) => (
                                 <div key={month} className="mb-10">
-                                    <div className="flex items-center mb-6"><span className="text-[10px] font-bold text-[#FF5C00] uppercase bg-[#FF5C00]/10 px-3 py-1 rounded-full">{month}</span><div className="flex-1 h-px bg-white/5 ml-4"></div></div>
+                                    <div className="flex items-center mb-6"><span className="text-[10px] font-black text-[#FF5C00] uppercase bg-[#FF5C00]/10 px-3 py-1 rounded-full">{month}</span><div className="flex-1 h-px bg-white/5 ml-4"></div></div>
                                     <div className="space-y-6">
                                         {items.map(f => {
                                             const p = f.name.split('-');
                                             const status = parseInt(p[2].replace('ST', ''));
                                             const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
                                             return (
-                                                <div key={f.name} className="card-container border-l-4 border-l-[#FF5C00]">
+                                                <div key={f.name} className="card-container">
                                                     <div className="absolute top-6 right-6 flex gap-3">
-                                                        <button onClick={() => atualizarInfo(f.name)} className="opacity-30 hover:opacity-100 hover:text-[#FF5C00] transition-all">
+                                                        <button onClick={() => atualizarInfo(f.name)} className="opacity-30 hover:opacity-100 hover:text-[#FF5C00]">
                                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                         </button>
-                                                        <button onClick={async () => {if(confirm("Excluir?")){await supabaseClient.storage.from('atestados').remove([f.name]); loadFiles();}}} className="opacity-30 hover:opacity-100 hover:text-red-500 transition-all font-bold">✕</button>
+                                                        <button onClick={async () => {if(confirm("Excluir?")){await supabaseClient.storage.from('atestados').remove([f.name]); loadFiles();}}} className="opacity-30 hover:opacity-100 hover:text-red-500 font-bold">✕</button>
                                                     </div>
                                                     <div className="flex gap-5 mb-6">
-                                                        <img src={data.publicUrl} className="w-16 h-16 rounded-2xl object-cover bg-black border border-white/5" />
+                                                        <img src={data.publicUrl} className="w-16 h-16 rounded-2xl object-cover bg-black border border-white/5 shadow-lg" />
                                                         <div className="flex-1">
-                                                            <h3 className="font-black text-lg uppercase leading-tight">{p[5].replace(/g, ' ')}</h3>
-                                                            {/* Ajuste: Nome da loja em Laranja vibrante */}
-                                                            <p className="text-[10px] font-bold text-[#FF5C00] uppercase">{p[6].replace(/g, ' ').replace('.jpg', '')}</p>
+                                                            <h3 className="font-black text-lg uppercase leading-tight">{p[5].replace(/_/g, ' ')}</h3>
+                                                            {/* NOME DA LOJA EM LARANJA VIBRANTE */}
+                                                            <p className="text-[11px] font-black text-[#FF5C00] uppercase">🏢 {p[6].replace(/_/g, ' ').replace('.jpg', '')}</p>
                                                             <p className="text-[9px] font-bold opacity-30 uppercase mt-2">📅 {p[3].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1')} ATÉ {p[4].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1')}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-between items-end mb-2 text-[9px] font-black uppercase tracking-tighter">
-                                                        {/* Ajuste: Status e Porcentagem em Laranja vibrante */}
+                                                    
+                                                    <div className="flex justify-between items-end mb-2 text-[9px] font-black uppercase tracking-widest">
+                                                        {/* STATUS E PORCENTAGEM EM LARANJA VIBRANTE */}
                                                         <span className="text-[#FF5C00]">STATUS</span>
                                                         <span className="text-[#FF5C00]">{(status/4)*100}%</span>
                                                     </div>
