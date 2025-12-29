@@ -11,32 +11,32 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        :root { --bg: #000; --card: #111; --text: #fff; --alcans: #FF5C00; --input: #1a1a1a; --border: rgba(255,255,255,0.05); --tab-inactive: #333; }
-        .light-mode { --bg: #f3f4f6; --card: #ffffff; --text: #111; --input: #e5e7eb; --border: rgba(0,0,0,0.05); --tab-inactive: #ddd; }
+        :root { --bg: #000; --card: #111; --text: #fff; --alcans: #FF5C00; --input: #1a1a1a; --border: rgba(255,255,255,0.05); }
+        .light-mode { --bg: #f3f4f6; --card: #ffffff; --text: #111; --input: #e5e7eb; --border: rgba(0,0,0,0.05); }
         
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; padding-bottom: 50px; }
         .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--border); position: relative; border-left: 4px solid var(--alcans); }
         input { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; }
         
-        /* Correção da visibilidade das abas */
-        .tab-btn { padding: 12px 24px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 14px; transition: 0.3s; color: var(--text); opacity: 0.6; background: transparent; }
+        /* Abas Superiores */
+        .tab-btn { padding: 12px 24px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 14px; transition: 0.3s; color: var(--text); opacity: 0.4; }
         .tab-btn.active { opacity: 1; background: var(--alcans); color: white; }
         
+        /* Botões de Status Restaurados */
         .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; cursor: pointer; transition: 0.2s; border: none; }
         .btn-status.active { background: var(--alcans); color: #fff; }
+        
         .progress-segment { flex: 1; height: 6px; border-radius: 10px; background: var(--input); }
         .progress-segment.active { background: var(--alcans); }
         
         .cluster-opt { flex: 1; padding: 10px; border-radius: 12px; background: var(--input); font-size: 10px; font-weight: 900; text-align: center; cursor: pointer; opacity: 0.4; border: 1px solid transparent; }
         .cluster-opt.active { opacity: 1; border-color: var(--alcans); color: var(--alcans); background: rgba(255,92,0,0.05); }
         
-        /* Switch de Tema com Ícones */
         .theme-container { display: flex; align-items: center; gap: 8px; background: var(--input); padding: 4px 8px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border); }
         .theme-switch { width: 36px; height: 18px; background: #333; border-radius: 20px; position: relative; transition: 0.3s; }
         .theme-switch::after { content: ''; width: 14px; height: 14px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: 0.3s; }
         .light-mode .theme-switch { background: var(--alcans); }
         .light-mode .theme-switch::after { left: 20px; }
-        .icon-theme { font-size: 12px; }
     </style>
 </head>
 <body>
@@ -55,10 +55,7 @@
             const [selectedCluster, setSelectedCluster] = useState('CL1');
             const [searchTerm, setSearchTerm] = useState('');
 
-            useEffect(() => {
-                document.body.className = isDarkMode ? '' : 'light-mode';
-            }, [isDarkMode]);
-
+            useEffect(() => { document.body.className = isDarkMode ? '' : 'light-mode'; }, [isDarkMode]);
             useEffect(() => { loadFiles(); }, []);
 
             const loadFiles = async () => {
@@ -98,10 +95,19 @@
                 const fileName = `V5-${selectedCluster}-ST1-${form.dataInicio.value.replace(/-/g, '')}-${form.dataFinal.value.replace(/-/g, '')}-${limparParaURL(form.nome.value)}-${limparParaURL(form.loja.value)}.jpg`;
                 try {
                     await supabaseClient.storage.from('atestados').upload(fileName, form.foto.files[0]);
-                    form.reset();
-                    await loadFiles();
-                    setActiveTab('pesquisa');
+                    form.reset(); await loadFiles(); setActiveTab('pesquisa');
                 } catch (e) { alert("Erro ao salvar!"); }
+                setLoading(false);
+            };
+
+            const atualizarStatus = async (oldName, novoStatus) => {
+                setLoading(true);
+                const p = oldName.split('-');
+                p[2] = `ST${novoStatus}`;
+                const newName = p.join('-');
+                await supabaseClient.storage.from('atestados').copy(oldName, newName);
+                await supabaseClient.storage.from('atestados').remove([oldName]);
+                await loadFiles();
                 setLoading(false);
             };
 
@@ -114,9 +120,7 @@
                             <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest mt-1">Gestão de Atestados</p>
                         </div>
                         <div className="theme-container" onClick={() => setIsDarkMode(!isDarkMode)}>
-                            <span className="icon-theme">🌙</span>
-                            <div className="theme-switch"></div>
-                            <span className="icon-theme">☀️</span>
+                            <span>🌙</span><div className="theme-switch"></div><span>☀️</span>
                         </div>
                     </header>
 
@@ -126,7 +130,7 @@
                         ))}
                     </div>
 
-                    <div className="flex gap-2 mb-8 bg-[#111] dark:bg-[#111] light:bg-[#e5e7eb] p-1.5 rounded-2xl border border-white/5 shadow-lg" style={{backgroundColor: isDarkMode ? '#111' : '#e5e7eb'}}>
+                    <div className="flex gap-2 mb-8 p-1.5 rounded-2xl border border-white/5" style={{backgroundColor: isDarkMode ? '#111' : '#e5e7eb'}}>
                         <button onClick={() => setActiveTab('novo')} className={`tab-btn flex-1 ${activeTab === 'novo' ? 'active' : ''}`}>Novo</button>
                         <button onClick={() => setActiveTab('pesquisa')} className={`tab-btn flex-1 ${activeTab === 'pesquisa' ? 'active' : ''}`}>Pesquisar</button>
                     </div>
@@ -137,19 +141,11 @@
                                 <input name="nome" placeholder="Nome do Colaborador" required />
                                 <input name="loja" placeholder="Loja / Unidade" required />
                                 <div className="flex gap-4">
-                                    <div className="flex-1">
-                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2">Início</label>
-                                        <input name="dataInicio" type="date" required />
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="text-[10px] font-bold opacity-30 uppercase ml-2">Fim</label>
-                                        <input name="dataFinal" type="date" required />
-                                    </div>
+                                    <div className="flex-1"><label className="text-[10px] font-bold opacity-30 uppercase ml-2">Início</label><input name="dataInicio" type="date" required /></div>
+                                    <div className="flex-1"><label className="text-[10px] font-bold opacity-30 uppercase ml-2">Fim</label><input name="dataFinal" type="date" required /></div>
                                 </div>
                                 <input name="foto" type="file" accept="image/*" className="!p-4 text-xs" required />
-                                <button type="submit" disabled={loading} className="w-full bg-[#FF5C00] p-5 rounded-2xl font-black uppercase text-sm shadow-xl hover:opacity-90 transition-all text-white">
-                                    {loading ? "ENVIANDO..." : "SALVAR"}
-                                </button>
+                                <button type="submit" disabled={loading} className="w-full bg-[#FF5C00] p-5 rounded-2xl font-black uppercase text-sm text-white">{loading ? "ENVIANDO..." : "SALVAR"}</button>
                             </form>
                         </div>
                     ) : (
@@ -168,21 +164,26 @@
                                             const status = parseInt(p[2].replace('ST', ''));
                                             const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
                                             return (
-                                                <div key={f.name} className="card-container shadow-xl">
+                                                <div key={f.name} className="card-container">
                                                     <div className="flex gap-5 mb-6">
-                                                        <img src={data.publicUrl} className="w-16 h-16 rounded-2xl object-cover bg-black border border-white/5 shadow-md" />
+                                                        <img src={data.publicUrl} className="w-16 h-16 rounded-2xl object-cover bg-black border border-white/5" />
                                                         <div className="flex-1">
                                                             <h3 className="font-black text-lg uppercase leading-tight">{p[5].replace(/_/g, ' ')}</h3>
                                                             <p className="text-[11px] font-black text-[#FF5C00] uppercase">🏢 {p[6].replace(/_/g, ' ').replace('.jpg', '')}</p>
                                                             <p className="text-[9px] font-bold opacity-30 uppercase mt-2">📅 {p[3].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1')} ATÉ {p[4].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1')}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-between items-end mb-2 text-[9px] font-black uppercase tracking-widest">
-                                                        <span className="text-[#FF5C00]">STATUS</span>
-                                                        <span className="text-[#FF5C00]">{(status/4)*100}%</span>
+                                                    <div className="flex justify-between items-end mb-2 text-[9px] font-black uppercase tracking-widest text-[#FF5C00]">
+                                                        <span>STATUS</span><span>{(status/4)*100}%</span>
                                                     </div>
                                                     <div className="flex gap-1.5 mb-4">
                                                         {[1,2,3,4].map(s => <div key={s} className={`progress-segment ${status >= s ? 'active' : ''}`} />)}
+                                                    </div>
+                                                    {/* BOTÕES RESTAURADOS ABAIXO */}
+                                                    <div className="flex gap-2">
+                                                        {['Foto','Form','Físico','DP'].map((label, i) => (
+                                                            <button key={i} onClick={() => atualizarStatus(f.name, i+1)} className={`btn-status ${status >= i+1 ? 'active' : ''}`}>{label}</button>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             );
