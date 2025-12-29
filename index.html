@@ -12,7 +12,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         :root { --bg: #000; --card: #111; --text: #fff; --alcans: #FF5C00; --input: #1a1a1a; --border: rgba(255,255,255,0.05); }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
+        .light-mode { --bg: #f3f4f6; --card: #ffffff; --text: #111; --input: #e5e7eb; --border: rgba(0,0,0,0.05); }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; padding-bottom: 50px; }
         .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--border); position: relative; border-left: 4px solid var(--alcans); }
         input { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; }
         .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; cursor: pointer; transition: 0.2s; border: none; }
@@ -23,6 +24,10 @@
         .tab-btn.active { opacity: 1; background: var(--alcans); color: white; }
         .cluster-opt { flex: 1; padding: 10px; border-radius: 12px; background: var(--input); font-size: 10px; font-weight: 900; text-align: center; cursor: pointer; opacity: 0.4; border: 1px solid transparent; }
         .cluster-opt.active { opacity: 1; border-color: var(--alcans); color: var(--alcans); background: rgba(255,92,0,0.05); }
+        .theme-switch { width: 44px; height: 22px; background: #333; border-radius: 20px; position: relative; cursor: pointer; transition: 0.3s; }
+        .theme-switch::after { content: ''; width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: 0.3s; }
+        .light-mode .theme-switch { background: var(--alcans); }
+        .light-mode .theme-switch::after { left: 24px; }
     </style>
 </head>
 <body>
@@ -34,11 +39,16 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const App = () => {
+            const [isDarkMode, setIsDarkMode] = useState(true);
             const [files, setFiles] = useState([]);
             const [loading, setLoading] = useState(false);
             const [activeTab, setActiveTab] = useState('pesquisa');
             const [selectedCluster, setSelectedCluster] = useState('CL1');
             const [searchTerm, setSearchTerm] = useState('');
+
+            useEffect(() => {
+                document.body.className = isDarkMode ? '' : 'light-mode';
+            }, [isDarkMode]);
 
             useEffect(() => { loadFiles(); }, []);
 
@@ -114,9 +124,13 @@
 
             return (
                 <div className="max-w-xl mx-auto p-6">
-                    <header className="pt-8 pb-6 text-center">
-                        <h1 className="text-3xl font-black italic text-[#FF5C00] uppercase tracking-tighter">ALCANS</h1>
-                        <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest mt-1">Gestão de Atestados</p>
+                    <header className="pt-8 pb-6 flex justify-between items-center">
+                        <div className="w-10"></div>
+                        <div className="text-center">
+                            <h1 className="text-3xl font-black italic text-[#FF5C00] uppercase tracking-tighter">ALCANS</h1>
+                            <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest mt-1">Gestão de Atestados</p>
+                        </div>
+                        <div onClick={() => setIsDarkMode(!isDarkMode)} className="theme-switch"></div>
                     </header>
 
                     <div className="flex gap-2 mb-6">
@@ -169,7 +183,7 @@
                                                         <button onClick={async () => {if(confirm("Excluir?")){await supabaseClient.storage.from('atestados').remove([f.name]); loadFiles();}}} className="opacity-30 hover:opacity-100 hover:text-red-500 font-bold">✕</button>
                                                     </div>
                                                     <div className="flex gap-5 mb-6">
-                                                        <img src={data.publicUrl} className="w-16 h-16 rounded-2xl object-cover bg-black border border-white/5 shadow-lg" />
+                                                        <img src={data.publicUrl} className="w-16 h-16 rounded-2xl object-cover bg-black border border-white/5" />
                                                         <div className="flex-1">
                                                             <h3 className="font-black text-lg uppercase leading-tight">{p[5].replace(/_/g, ' ')}</h3>
                                                             {/* NOME DA LOJA EM LARANJA VIBRANTE */}
