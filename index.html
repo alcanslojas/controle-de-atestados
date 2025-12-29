@@ -11,31 +11,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        
         :root { --bg: #000; --card: #111; --text: #fff; --input: #1a1a1a; --border: rgba(255,255,255,0.03); }
         .light-mode { --bg: #f3f4f6; --card: #ffffff; --text: #111; --input: #e5e7eb; --border: rgba(0,0,0,0.05); }
-
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: all 0.3s; }
         .text-alcans { color: #FF5C00; }
         .bg-alcans { background-color: #FF5C00; }
-        
         .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--border); position: relative; }
-        
         input { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; font-size: 14px; }
-        
         .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; cursor: pointer; border: none; transition: 0.2s; }
         .btn-status.active { background: #FF5C00; color: #fff; }
-
         .progress-segment { flex: 1; height: 6px; border-radius: 10px; background: var(--input); }
         .progress-segment.active { background: #FF5C00; }
-
         .tab-btn { padding: 12px 24px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 14px; transition: 0.3s; opacity: 0.4; }
         .tab-btn.active { opacity: 1; background: #FF5C00; color: white; }
-
         .month-divider { display: flex; align-items: center; margin: 2rem 0 1rem 0; }
         .month-label { font-size: 10px; font-weight: 900; color: #FF5C00; letter-spacing: 2px; text-transform: uppercase; background: rgba(255,92,0,0.1); padding: 4px 12px; border-radius: 20px; }
         .month-line { flex: 1; height: 1px; background: rgba(255,92,0,0.2); margin-left: 15px; }
-
         .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
@@ -48,7 +39,6 @@
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
-
         const SUPABASE_URL = 'https://zxjegvonpiuyfplkonkb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4amVndm9ucGl1eWZwbGtvbmtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDQwNjMsImV4cCI6MjA4MjQyMDA2M30.P-EkAuX1LiM5hybYYVaaUvMd04LgV7w0-GDkealXbwo';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -70,25 +60,23 @@
             const loadFiles = async () => {
                 const { data } = await supabaseClient.storage.from('atestados').list();
                 if (data) {
-                    const sorted = data
-                        .filter(f => f.name.startsWith('V5-'))
+                    const sorted = data.filter(f => f.name.startsWith('V5-'))
                         .sort((a, b) => b.name.split('-')[2].localeCompare(a.name.split('-')[2]));
                     setFiles(sorted);
                 }
             };
 
-            // CORREÇÃO: Função que permite acentos e cedilha
-            const limparTexto = (txt) => {
-                return txt.trim()
+            // Remove acentos e caracteres especiais para evitar o erro "Invalid Key"
+            const limparParaURL = (str) => {
+                return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                     .replace(/\s+/g, '_')
-                    .replace(/[^a-zA-Z0-9À-ÿ_]/g, ''); 
+                    .replace(/[^a-zA-Z0-9_]/g, '');
             };
 
             const groupedFiles = useMemo(() => {
                 const filtered = files.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
                 const groups = {};
                 const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
                 filtered.forEach(f => {
                     const datePart = f.name.split('-')[2];
                     const year = datePart.substring(0, 4);
@@ -106,17 +94,15 @@
                 if (!novoNome) return;
                 const novaLoja = prompt("Loja/Unidade:", p[5].replace(/_/g, ' ').replace('.jpg', ''));
                 if (!novaLoja) return;
-                
                 setLoading(true);
-                const nLimpo = limparTexto(novoNome);
-                const lLimpa = limparTexto(novaLoja);
+                const nLimpo = limparParaURL(novoNome);
+                const lLimpa = limparParaURL(novaLoja);
                 const newName = `${p[0]}-${p[1]}-${p[2]}-${p[3]}-${nLimpo}-${lLimpa}.jpg`;
-
                 try {
                     await supabaseClient.storage.from('atestados').copy(oldName, newName);
                     await supabaseClient.storage.from('atestados').remove([oldName]);
                     await loadFiles();
-                } catch (e) { alert("Erro: " + e.message); }
+                } catch (e) { alert("Erro ao editar: " + e.message); }
                 setLoading(false);
             };
 
@@ -129,7 +115,7 @@
                     await supabaseClient.storage.from('atestados').copy(oldName, newName);
                     await supabaseClient.storage.from('atestados').remove([oldName]);
                     await loadFiles();
-                } catch (e) { alert("Erro: " + e.message); }
+                } catch (e) { alert("Erro ao atualizar status: " + e.message); }
                 setLoading(false);
             };
 
@@ -138,15 +124,19 @@
                 setLoading(true);
                 const form = e.target;
                 const file = form.foto.files[0];
-                const nomeLimpo = limparTexto(form.nome.value);
-                const lojaLimpa = limparTexto(form.loja.value);
+                const nomeLimpo = limparParaURL(form.nome.value);
+                const lojaLimpa = limparParaURL(form.loja.value);
                 const dInicio = form.dataInicio.value.replace(/-/g, '');
                 const dFinal = form.dataFinal.value.replace(/-/g, '');
-
                 const fileName = `V5-ST1-${dInicio}-${dFinal}-${nomeLimpo}-${lojaLimpa}.jpg`;
-                const { error } = await supabaseClient.storage.from('atestados').upload(fileName, file);
-                if (error) alert(error.message);
-                else { form.reset(); loadFiles(); setActiveTab('pesquisa'); }
+                
+                try {
+                    const { error } = await supabaseClient.storage.from('atestados').upload(fileName, file);
+                    if (error) throw error;
+                    form.reset();
+                    await loadFiles();
+                    setActiveTab('pesquisa');
+                } catch (e) { alert("Erro no upload: " + e.message); }
                 setLoading(false);
             };
 
@@ -187,7 +177,7 @@
                                 <div className="bg-[#1a1a1a] p-4 rounded-xl border border-white/5">
                                     <input name="foto" type="file" accept="image/*" className="!p-0 text-xs" required />
                                 </div>
-                                <button type="submit" disabled={loading} className="w-full bg-alcans p-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-orange-900/40">
+                                <button type="submit" disabled={loading} className="w-full bg-alcans p-5 rounded-2xl font-black uppercase tracking-widest text-sm">
                                     {loading ? "SALVANDO..." : "SALVAR NO SUPABASE"}
                                 </button>
                             </form>
@@ -195,20 +185,11 @@
                     ) : (
                         <div className="animate-in fade-in duration-500">
                             <div className="mb-4">
-                                <input 
-                                    placeholder="🔍 Buscar por nome ou unidade..." 
-                                    className="!bg-alcans/10 !border !border-alcans/20 !text-alcans"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                                <input placeholder="🔍 Buscar por nome ou unidade..." className="!bg-alcans/10 !border !border-alcans/20 !text-alcans" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-
                             {Object.entries(groupedFiles).map(([month, items]) => (
                                 <div key={month} className="mb-10">
-                                    <div className="month-divider">
-                                        <span className="month-label">{month}</span>
-                                        <div className="month-line"></div>
-                                    </div>
+                                    <div className="month-divider"><span className="month-label">{month}</span><div className="month-line"></div></div>
                                     <div className="space-y-6">
                                         {items.map(f => {
                                             const p = f.name.split('-');
@@ -216,7 +197,6 @@
                                             const dIni = p[2].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1');
                                             const dFim = p[3].replace(/(\d{4})(\d{2})(\d{2})/, '$3/$2/$1');
                                             const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
-
                                             return (
                                                 <div key={f.name} className="card-container">
                                                     <div className="absolute top-6 right-6 flex gap-4">
@@ -230,23 +210,12 @@
                                                         <div>
                                                             <h3 className="font-black text-xl uppercase leading-tight">{p[4].replace(/_/g, ' ')}</h3>
                                                             <p className="text-[10px] font-bold text-alcans uppercase">🏢 {p[5].replace(/_/g, ' ').replace('.jpg', '')}</p>
-                                                            <div className="flex gap-3 mt-2 text-[9px] font-black opacity-40 uppercase">
-                                                                <span>{dIni} até {dFim}</span>
-                                                            </div>
+                                                            <div className="flex gap-3 mt-2 text-[9px] font-black opacity-40 uppercase"><span>{dIni} até {dFim}</span></div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-between items-end mb-2 text-[9px] font-black opacity-20 uppercase">
-                                                        <span>Progresso</span>
-                                                        <span className="text-alcans opacity-100">{(status/4)*100}%</span>
-                                                    </div>
-                                                    <div className="flex gap-2 mb-4">
-                                                        {[1,2,3,4].map(s => <div key={s} className={`progress-segment ${status >= s ? 'active' : ''}`} />)}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        {['Foto','Form','Físico','DP'].map((label, i) => (
-                                                            <button key={i} onClick={() => atualizarStatus(f.name, i+1)} className={`btn-status ${status >= i+1 ? 'active' : ''}`}>{label}</button>
-                                                        ))}
-                                                    </div>
+                                                    <div className="flex justify-between items-end mb-2 text-[9px] font-black opacity-20 uppercase"><span>Progresso</span><span className="text-alcans opacity-100">{(status/4)*100}%</span></div>
+                                                    <div className="flex gap-2 mb-4">{[1,2,3,4].map(s => <div key={s} className={`progress-segment ${status >= s ? 'active' : ''}`} />)}</div>
+                                                    <div className="flex gap-2">{['Foto','Form','Físico','DP'].map((label, i) => (<button key={i} onClick={() => atualizarStatus(f.name, i+1)} className={`btn-status ${status >= i+1 ? 'active' : ''}`}>{label}</button>))}</div>
                                                 </div>
                                             );
                                         })}
@@ -258,7 +227,6 @@
                 </div>
             );
         };
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
