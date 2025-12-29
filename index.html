@@ -12,12 +12,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         :root { --bg: #000; --card: #111; --text: #fff; --input: #1a1a1a; --border: rgba(255,255,255,0.03); }
-        .light-mode { --bg: #f3f4f6; --card: #ffffff; --text: #111; --input: #e5e7eb; --border: rgba(0,0,0,0.05); }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; transition: 0.3s; }
         .text-alcans { color: #FF5C00; }
         .bg-alcans { background-color: #FF5C00; }
         .card-container { background: var(--card); border-radius: 2rem; padding: 1.5rem; border: 1px solid var(--border); position: relative; }
-        input, select { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; font-size: 14px; appearance: none; }
+        input, select { background: var(--input) !important; border: none !important; color: var(--text) !important; padding: 1rem !important; border-radius: 1rem !important; width: 100%; outline: none; font-size: 14px; }
         .btn-status { font-size: 10px; font-weight: 900; padding: 14px 5px; border-radius: 12px; text-transform: uppercase; flex: 1; text-align: center; background: var(--input); color: #666; cursor: pointer; border: none; transition: 0.2s; }
         .btn-status.active { background: #FF5C00; color: #fff; }
         .tab-btn { padding: 12px 24px; font-weight: 900; font-size: 11px; text-transform: uppercase; border-radius: 14px; transition: 0.3s; opacity: 0.4; }
@@ -40,7 +39,7 @@
             const [files, setFiles] = useState([]);
             const [loading, setLoading] = useState(false);
             const [activeTab, setActiveTab] = useState('pesquisa');
-            const [selectedCluster, setSelectedCluster] = useState('CL1'); // Cluster Ativo
+            const [selectedCluster, setSelectedCluster] = useState('CL1');
             const [searchTerm, setSearchTerm] = useState('');
 
             useEffect(() => { loadFiles(); }, []);
@@ -56,7 +55,6 @@
 
             const limparParaURL = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
 
-            // Filtra os arquivos pelo Cluster Selecionado e busca
             const groupedFiles = useMemo(() => {
                 const clusterPrefix = `V5-${selectedCluster}`;
                 const filtered = files.filter(f => 
@@ -69,7 +67,7 @@
                 
                 filtered.forEach(f => {
                     const p = f.name.split('-');
-                    const datePart = p[3]; // AAAAMMDD agora está na posição 3
+                    const datePart = p[3]; 
                     const year = datePart.substring(0, 4);
                     const monthIdx = parseInt(datePart.substring(4, 6)) - 1;
                     const key = `${months[monthIdx]} ${year}`;
@@ -88,7 +86,6 @@
                 const dInicio = form.dataInicio.value.replace(/-/g, '');
                 const dFinal = form.dataFinal.value.replace(/-/g, '');
                 
-                // Novo formato: V5 - CLUSTER - STATUS - DATA_INI - DATA_FIM - NOME - LOJA
                 const fileName = `V5-${selectedCluster}-ST1-${dInicio}-${dFinal}-${nomeLimpo}-${lojaLimpa}.jpg`;
                 
                 try {
@@ -119,7 +116,6 @@
                         <p className="text-[9px] font-bold opacity-30 uppercase tracking-widest">Painel de Líderes</p>
                     </header>
 
-                    {/* Seleção de Cluster Global */}
                     <div className="cluster-selector">
                         {['CL1', 'CL2', 'CL3'].map((cl, i) => (
                             <div key={cl} onClick={() => setSelectedCluster(cl)} className={`cluster-opt ${selectedCluster === cl ? 'active' : ''}`}>
@@ -128,9 +124,10 @@
                         ))}
                     </div>
 
+                    {/* Nomes simplificados: Novo e Pesquisar */}
                     <div className="flex gap-2 mb-8 bg-[#111] p-1.5 rounded-2xl border border-white/5">
-                        <button onClick={() => setActiveTab('novo')} className={`tab-btn flex-1 ${activeTab === 'novo' ? 'active' : ''}`}>Inserir no {selectedCluster}</button>
-                        <button onClick={() => setActiveTab('pesquisa')} className={`tab-btn flex-1 ${activeTab === 'pesquisa' ? 'active' : ''}`}>Ver {selectedCluster}</button>
+                        <button onClick={() => setActiveTab('novo')} className={`tab-btn flex-1 ${activeTab === 'novo' ? 'active' : ''}`}>Novo</button>
+                        <button onClick={() => setActiveTab('pesquisa')} className={`tab-btn flex-1 ${activeTab === 'pesquisa' ? 'active' : ''}`}>Pesquisar</button>
                     </div>
 
                     {activeTab === 'novo' ? (
@@ -149,8 +146,9 @@
                                     </div>
                                 </div>
                                 <input name="foto" type="file" accept="image/*" className="!p-4 text-xs" required />
+                                {/* Botão simplificado: Salvar */}
                                 <button type="submit" disabled={loading} className="w-full bg-alcans p-5 rounded-2xl font-black uppercase text-sm">
-                                    {loading ? "ENVIANDO..." : `SALVAR NO ${selectedCluster}`}
+                                    {loading ? "ENVIANDO..." : "SALVAR"}
                                 </button>
                             </form>
                         </div>
@@ -158,8 +156,6 @@
                         <div>
                             <input placeholder={`🔍 Buscar em ${selectedCluster}...`} className="mb-6 !bg-alcans/10 !text-alcans" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             
-                            {Object.entries(groupedFiles).length === 0 && <p className="text-center opacity-20 py-10 text-xs font-bold">NENHUM REGISTRO NO {selectedCluster}</p>}
-
                             {Object.entries(groupedFiles).map(([month, items]) => (
                                 <div key={month} className="mb-10">
                                     <div className="flex items-center mb-6"><span className="month-label">{month}</span><div className="flex-1 h-px bg-white/5 ml-4"></div></div>
@@ -171,7 +167,7 @@
                                             const { data } = supabaseClient.storage.from('atestados').getPublicUrl(f.name);
                                             return (
                                                 <div key={f.name} className="card-container">
-                                                    <div className="absolute top-6 right-6 flex gap-4">
+                                                    <div className="absolute top-6 right-6">
                                                         <button onClick={async () => {if(confirm("Excluir?")){await supabaseClient.storage.from('atestados').remove([f.name]); loadFiles();}}} className="opacity-20 hover:text-red-500 font-bold">✕</button>
                                                     </div>
                                                     <div className="flex gap-5 mb-6">
